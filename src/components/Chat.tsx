@@ -1,72 +1,65 @@
-
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { io } from "socket.io-client"
 
-const url = "https://bocal-academy-chat.osc-fr1.scalingo.io/"
-const socket = (io(url, { autoConnect: false }))
-// const socket = io(url, { autoConnect: false })
+const socket = io("https://bocal-academy-chat.osc-fr1.scalingo.io/", { autoConnect: false });
 
 function Chat(): JSX.Element {
+    const [newMessage, setNewMessage] = useState<string>("");
+    const [data, setNewData] = useState<string[]>([]);
+    const socketRef = useRef(socket);
 
-    /** useState */
-    const [newMessage, setNewMessage] = useState<string>("")
-    const [data, setNewData] = useState([])
-    // const [socket, setSocket] = useState<string | null>(null)
-
-    /** Init Login at first render */
     useEffect(() => {
         console.log("Connexion");
-        const newSocket =
-            socket.auth = {
+        socket.on("authentication", (data) => {
+            socket.emit("authenticate", {
                 userName: "Barbu_san",
                 password: "cacahuete"
-            }
-        socket.connect()
-    }, [])
+            });
+        });
+        socket.connect();
+    }, []);
 
-    /** Update Message List */
     useEffect(() => {
-        getMessage()
-    }, [data])
-
-    /** Input Handler  */
-    const inputHandler = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const EnteredInput = e.target.value
-        setNewMessage(EnteredInput)
-    }
-
-    /** Send Message to Socket */
-    const sendMessage = (e: React.ChangeEvent<HTMLFormElement>) => {
-        socket.emit("message", { content: newMessage })
-        setNewMessage("")
-        e.preventDefault()
-    }
-
-    /** Get Messages From Socket */
-    const getMessage = () => {
         socket.on("message", (data) => {
             console.log("New Message from" + data.username);
-            [...data, setNewData(data.content)]
-        })
-    }
-    /** Main Render */
+            setNewData([...data, data.content]);
+        });
+    }, []);
+
+    useEffect(() => {
+        console.log("Update Message List");
+    }, [data]);
+
+    useEffect(() => {
+        if (newMessage) {
+            socketRef.current.emit("message", { content: newMessage });
+        }
+    }, [newMessage]);
+
+    const inputHandler = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const EnteredInput = e.target.value;
+        setNewMessage(EnteredInput);
+    }, []);
+
+    const sendMessage = (e: React.ChangeEvent<HTMLFormElement>) => {
+        setNewMessage("");
+        e.preventDefault();
+    };
+
+    const messages = useMemo(() => data.map((message, index) => (
+        <li key={index}>{message}</li>
+    )), [data]);
+
     return (
         <div className="App">
             <div className="chatBox">
                 <form onSubmit={sendMessage}>
-                    <input value={newMessage} placeholder="put message to send " type="text" onChange={inputHandler} />
+                    <input value={newMessage} placeholder="Enter Message" type="text" onChange={inputHandler} />
                     <button type="submit">Send</button>
                 </form>
+                <div className="messageField">{messages}</div>
             </div>
-            <div className="chatField">
-                <ul>
-                    {data.map((message, index) =>
-                        <li key={index}>{message}</li>)}
-                </ul>
-            </div>
-
         </div>
     )
 }
-
 export default Chat
