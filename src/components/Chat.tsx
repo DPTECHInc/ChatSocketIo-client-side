@@ -57,7 +57,7 @@ function Chat(): JSX.Element {
                     <input value={newMessage} placeholder="Enter Message" type="text" onChange={inputHandler} />
                     <button type="submit">Send</button>
                 </form>
-                <div className="messageField">{messages}</div>
+                <ul className="messageField">{messages}</ul>
             </div>
         </div>
     )
